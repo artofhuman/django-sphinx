@@ -26,7 +26,11 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.db.models.fields.related import RelatedField
 from django.db.models.query import QuerySet
-from django.utils.encoding import force_unicode
+
+try:
+    from django.utils.encoding import force_unicode
+except ImportError:
+    from django.utils.encoding import force_text as force_unicode
 
 from djangosphinx.conf import SPHINX_QUERY_OPTS, SPHINX_QUERY_LIMIT, \
     SPHINX_MAX_MATCHES, SPHINX_SNIPPETS, SPHINX_SNIPPETS_OPTS, \
@@ -199,7 +203,7 @@ class SphinxQuerySet(object):
         if args:
             fields = '`%s`' % '`, `'.join(args)
         if kwargs:
-            for k, v in kwargs.iteritems():
+            for k, v in kwargs.items():
                 aliases[k] = '%s AS `%s`' % (v, k)
 
         if fields or aliases:
@@ -215,7 +219,7 @@ class SphinxQuerySet(object):
         if snippets == self._snippets and not kwargs:
             return self
 
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             if isinstance(v, bool):
                 v = int(v)
 
@@ -417,7 +421,7 @@ class SphinxQuerySet(object):
     def _get_snippets_string(self):
         if self._snippets_string is None:
             opts_list = []
-            for k, v in self._snippets_opts.iteritems():
+            for k, v in self._snippets_opts.items():
                 opt = ('\'%s\' AS %s' if isinstance(v, six.string_types) else '%s AS %s') % (v, k)
                 opts_list.append(opt)
 
@@ -476,7 +480,7 @@ class SphinxQuerySet(object):
         if not kwargs:
             return ''
         opts = []
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             if isinstance(v, bool):
                 v = int(v)
             elif isinstance(v, dict):
@@ -681,7 +685,7 @@ class SphinxQuerySet(object):
         return map(to_sphinx, values)
 
     def _process_filters(self, filters, exclude=False, **kwargs):
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             if  len(k.split('__')) > 3:
                 raise NotImplementedError('Related model fields lookup not supported')
 
@@ -781,7 +785,7 @@ class SphinxQuerySet(object):
         if self._query or self._filters or self._excludes:
             q.append('WHERE')
         if self._query:
-            q.append('MATCH(%s)')
+            q.append('MATCH({})')
             self._query_args.append(self._query)
 
             if self._filters or self._excludes:
@@ -827,7 +831,7 @@ class SphinxQuerySet(object):
         c._metadata = None
         c._iter = None
 
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             setattr(c, k, v)
 
         return c

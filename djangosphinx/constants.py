@@ -1,8 +1,12 @@
 #coding: utf-8
 from __future__ import unicode_literals
+import sys
 
 __author__ = 'ego'
 
+PY3 = sys.version_info[0] == 3
+if PY3:
+    unicode = str
 
 # MySQL
 QUERY_RANKERS = [

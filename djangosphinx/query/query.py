@@ -7,11 +7,21 @@ import MySQLdb
 import re
 
 from threading import local
+from MySQLdb.connections import Connection
+
 
 from django.core.signals import request_finished
-from django.utils.encoding import force_unicode
+try:
+    from django.utils.encoding import force_unicode
+except ImportError:
+    from django.utils.encoding import force_text as force_unicode
 
 from djangosphinx.conf import SEARCHD_SETTINGS, SPHINX_ESCAPE_FIELD_SEARCH_OPERATOR
+
+
+class CustomConnection(Connection):
+    def character_set_name(self):
+        return 'utf8'
 
 
 class ConnectionError(Exception):
@@ -26,7 +36,12 @@ class ConnectionHandler(object):
         if hasattr(self._connections, 'sphinx_database_connection'):
             return getattr(self._connections, 'sphinx_database_connection')
 
-        conn = MySQLdb.connect(host=SEARCHD_SETTINGS['sphinx_host'], port=SEARCHD_SETTINGS['sphinx_port'], charset='utf8', use_unicode=False)
+        conn = CustomConnection(
+            host=SEARCHD_SETTINGS['sphinx_host'],
+            port=SEARCHD_SETTINGS['sphinx_port'],
+            charset='utf8'
+        )
+        #conn.set_character_set('utf8')
         setattr(self._connections, 'sphinx_database_connection', conn)
         return conn
 
@@ -62,7 +77,6 @@ class SphinxQuery(object):
     _arr_regexp = re.compile(r'^([a-z]+)\[(\d+)\]', re.I)
 
     def __init__(self, query=None, args=None):
-
         self._query = query
         self._query_args = args
         self._result = None
@@ -111,7 +125,7 @@ class SphinxQuery(object):
         q._meta = None
         q._query = None
 
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             setattr(q, k, v)
 
         return q
@@ -150,7 +164,7 @@ class SphinxQuery(object):
 
         if 'keyword' in _meta:
             _meta['words'] = {}
-            for k, v in _meta['keyword'].iteritems():
+            for k, v in _meta['keyword'].items():
                 _meta['words'][v] = {
                     'hits': _meta['hits'][k],
                     'docs': _meta['docs'][k],
