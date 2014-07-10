@@ -1,5 +1,6 @@
 #coding: utf-8
 from __future__ import unicode_literals
+from functools import reduce
 
 __author__ = 'ego'
 
@@ -286,7 +287,16 @@ class SphinxQuerySet(object):
                 f = getattr(obj, 'pk')
                 f = self._encode_document_id(f)
             else:
-                f = getattr(obj, field)
+                # relative fields like category__name
+                if '__' in field:
+                    try:
+                        f = reduce(getattr, field.split('__'), obj)
+                    except AttributeError:
+                        # if local field is None thats raise error
+                        f = ''
+
+                else:
+                    f = getattr(obj, field)
 
                 if hasattr(f, 'through'): # ManyToMany
                     # пропускаем пока что...
@@ -339,7 +349,7 @@ class SphinxQuerySet(object):
             for f in v:
                 if isinstance(f, six.string_types):
                     query_args.append(f)
-                    f_list.append('%s')
+                    f_list.append('{}')
                 elif isinstance(f, (list, tuple)):
                     f_list.append('(%s)' % ','.join(f))
                 else:
@@ -348,7 +358,6 @@ class SphinxQuerySet(object):
             q.append('(%s)' % ','.join(f_list))
 
         query.append(', '.join(q))
-
         cursor = conn_handler.cursor()
         count = cursor.execute(' '.join(query), query_args)
 

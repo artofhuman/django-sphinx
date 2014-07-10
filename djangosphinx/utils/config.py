@@ -310,7 +310,7 @@ def _process_related_fields(options, model_class):
 
             related_field = related_model._meta.get_field(related_model_field_name)
 
-            if not isinstance(related_field, OneToOneField):
+            if not isinstance(local_field, (ForeignKey, OneToOneField)):
                 raise TypeError('Only OneToOne relations can be added to the index '
                                 'for `%s.%s`. Not `%s`.' % (model_class._meta.app_label,
                                                             model_class._meta.module_name,
@@ -323,7 +323,7 @@ def _process_related_fields(options, model_class):
             if related_table not in join_tables:
                 join_tables.append(related_table)
                 join_statements.append(
-                    'INNER JOIN %s ON %s.%s=%s.%s ' % (related_table,
+                    'LEFT JOIN %s ON %s.%s=%s.%s ' % (related_table,
                                                        local_table,
                                                        local_field_column,
                                                        related_table,
@@ -334,12 +334,11 @@ def _process_related_fields(options, model_class):
                                                        related_column,
                                                        local_field_name,
                                                        related_model_field_name))
-            if related_field_type != 'string':
-                related_stored_attrs.setdefault(related_field_type, []).append('%s__%s' % (local_field_name,
-                                                                                           related_model_field_name))
-        else:
-            raise NotImplementedError('Oops... we need to go deeper?')
 
+            related_stored_attrs.setdefault(related_field_type, []).append('%s__%s' % (local_field_name,
+                                                                                       related_model_field_name))
+        else:
+            raise NotImplementedError('Oops... we need to go drink beer?')
 
     return related_fields, related_stored_attrs, join_statements
 

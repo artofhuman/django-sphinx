@@ -50,4 +50,5 @@ class Command(BaseCommand):
 
         output.append(generate_sphinx_config())
 
-        print ('\n'.join(output))
+        with open(settings.SPHINX_CONFIG_FILE, 'w') as config_file:
+          config_file.write(('\n'.join(output)))
