@@ -41,7 +41,7 @@ class ConnectionHandler(object):
             port=SEARCHD_SETTINGS['sphinx_port'],
             charset='utf8'
         )
-        #conn.set_character_set('utf8')
+
         setattr(self._connections, 'sphinx_database_connection', conn)
         return conn
 

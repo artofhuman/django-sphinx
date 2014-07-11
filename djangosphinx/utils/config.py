@@ -107,7 +107,6 @@ def get_sphinx_attr_type_for_field(field):
         float=(DecimalField, FloatField),
         timestamp=(DateField, DateTimeField, TimeField),
         bool=(BooleanField, NullBooleanField),
-
         #multi=(ManyToManyField,)
     )
 
@@ -127,9 +126,7 @@ def generate_config_for_model(model_class, index=None, sphinx_params=None):
     """
     if sphinx_params is None:
         sphinx_params = dict()
-    return generate_source_for_model(model_class, index, sphinx_params)\
-    #       + "\n\n" + \
-    #generate_index_for_model(model_class, index, sphinx_params)
+    return generate_source_for_model(model_class, index, sphinx_params)
 
 
 def _process_options_for_model_fields(options, model_fields, model_class):
@@ -145,12 +142,7 @@ def _process_options_for_model_fields(options, model_fields, model_class):
     included_fields = options.get('included_fields', [])
     excluded_fields = options.get('excluded_fields', [])
 
-    if 'stored_string_attributes' in options:
-        warnings.warn('`stored_string_attributes` is deprecated. Use `stored_attributes` instead.', DeprecationWarning)
-        stored_attrs_list = list(options['stored_string_attributes'])
-    else:
-        stored_attrs_list = options.get('stored_attributes', [])
-
+    stored_attrs_list = options.get('stored_attributes', [])
     stored_fields_list = options.get('stored_fields', [])
 
     stored_fields = [f for f in stored_fields_list if
@@ -257,7 +249,7 @@ def _process_mva_fields_for_model(options, model_class, content_type, indexes):
                                                               ),
 
                             'FROM %s ' % model_table,
-                            'INNER JOIN %s ON %s.%s=%s.%s ' % (m2m_table,
+                            'LEFT JOIN %s ON %s.%s=%s.%s ' % (m2m_table,
 
                                                                m2m_table,
                                                                m2m_model_column,
@@ -275,9 +267,7 @@ def _process_mva_fields_for_model(options, model_class, content_type, indexes):
 
     return mvas
 
-def _process_related_fields(options, model_class):
-    related_field_names = options.get('related_fields', [])
-
+def _process_related_fields(related_field_names, model_class):
     local_table = model_class._meta.db_table
     related_fields = []
     related_stored_attrs = {}
@@ -373,6 +363,7 @@ def get_source_context(tables, index_name, fields, indexes, mva_fields,
         'stored_string_fields': stored_string_fields,
         'stored_related_attrs': stored_related_attrs,
 
+        'sphinx_internal_id': '%s.%s as sphinx_internal_id' % (doc_id.model._meta.db_table, doc_id.column),
         'document_id': '%s<<%i|%s.%s' % (content_type_id,
                                                DOCUMENT_ID_SHIFT,
                                                doc_id.model._meta.db_table,
@@ -428,7 +419,10 @@ def generate_source_for_model(model_class, index=None, sphinx_params=None):
 
     content_types = []
 
-    related_fields, related_stored_attrs, join_statements = _process_related_fields(options, model_class)
+    related_fields, related_stored_attrs, join_statements = _process_related_fields(options.get('related_fields', []), model_class)
+
+    # TODO: this looks like a hack
+    related_string_fields, related_string_attr, related_string_join_statements = _process_related_fields(options.get('related_string_fields', []), model_class)
 
     table = model_class._meta.db_table
     if index is None:
@@ -441,11 +435,11 @@ def generate_source_for_model(model_class, index=None, sphinx_params=None):
         fields,
         indexes,
         mva_fields,
-        related_fields,
-        join_statements,
+        related_fields + related_string_fields,
+        join_statements + related_string_join_statements,
         content_types,
         stored_attrs,
-        stored_fields,
+        stored_fields + related_string_attr['string'],
         related_stored_attrs,
         content_type,
     )
@@ -500,6 +494,7 @@ def generate_source_for_model(model_class, index=None, sphinx_params=None):
         rt_index_context.update(dict(
             index_name=rt_index,
             rt_fields=rt_fields,
+            rt_string_fields = related_string_attr['string'],
             rt_attrs=stored_attrs,
             rt_string_attrs=stored_fields,
             rt_mva=rt_mva,
@@ -509,9 +504,6 @@ def generate_source_for_model(model_class, index=None, sphinx_params=None):
         rtic = Context(rt_index_context)
         rt_index_config = rt_index_template.render(rtic)
         results.append(rt_index_config)
-
-    if build_delta:
-        pass
 
     return '\n\n'.join(results)
 

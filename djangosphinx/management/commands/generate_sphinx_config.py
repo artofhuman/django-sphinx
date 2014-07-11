@@ -11,6 +11,7 @@ class Command(BaseCommand):
     help = "Prints generic configuration for any models which use a standard SphinxSearch manager."
     option_list = BaseCommand.option_list + (
         make_option('--all', action='store_true', default=False, dest='find_all', help='generate config for all models in all INSTALLED_APPS'),
+        make_option('--verbose', action='store_true', default=False, dest='verbose', help='show generated config in STDOUT'),
     )
 
     output_transaction = True
@@ -50,5 +51,8 @@ class Command(BaseCommand):
 
         output.append(generate_sphinx_config())
 
-        with open(settings.SPHINX_CONFIG_FILE, 'w') as config_file:
-          config_file.write(('\n'.join(output)))
+        if options['verbose']:
+          print(('\n'.join(output)))
+        else:
+          with open(settings.SPHINX_CONFIG_FILE, 'w') as config_file:
+            config_file.write(('\n'.join(output)))

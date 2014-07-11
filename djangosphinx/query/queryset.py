@@ -286,6 +286,8 @@ class SphinxQuerySet(object):
             if field == 'id':
                 f = getattr(obj, 'pk')
                 f = self._encode_document_id(f)
+            elif field == 'sphinx_internal_id':
+                f = getattr(obj, 'pk')
             else:
                 # relative fields like category__name
                 if '__' in field:
@@ -624,13 +626,14 @@ class SphinxQuerySet(object):
 
             fields = []
             for f in ['included_fields', 'stored_attributes',
-                      'stored_fields', 'related_fields', 'mva_fields']:
+                      'stored_fields', 'related_fields', 'mva_fields', 'related_string_fields']:
                 fields.extend(opts.get(f, []))
             for f in excluded:
                 if f in fields:
                     fields.pop(fields.index(f))
 
             fields.insert(0, 'id')
+            fields.insert(1, 'sphinx_internal_id')
 
             self._index_fields_cache = fields
 
