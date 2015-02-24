@@ -821,7 +821,7 @@ class SphinxQuerySet(object):
         return self._group_order_by
 
     def _build_limits(self):
-        if not self._limit is None and self._offset is None:
+        if self._limit is None:
             return ''
 
         q = ['LIMIT']
